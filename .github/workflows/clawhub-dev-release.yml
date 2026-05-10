@@ -283,24 +283,80 @@ jobs:
           echo "source_url=$source_url"
 
   publish-clawhub:
-    name: Publish to ClawHub (official trusted workflow)
+    name: Publish to ClawHub
     if: ${{ inputs.publish_clawhub }}
     needs:
       - guard
       - prepare-package-source
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
     permissions:
       contents: read
       id-token: write
-    uses: openclaw/clawhub/.github/workflows/package-publish.yml@v0.12.0
-    with:
-      source: ${{ needs.prepare-package-source.outputs.source_url }}
-      dry_run: false
-      json: true
-      version: ${{ needs.guard.outputs.version }}
-      tags: ${{ needs.guard.outputs.tags }}
-      source_repo: ${{ github.repository }}
-      source_commit: ${{ github.sha }}
-      source_ref: ${{ github.ref }}
+    steps:
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+
+      - name: Install ClawHub CLI
+        run: npm install -g openclaw@latest
+
+      - name: Write ClawHub token config
+        env:
+          CLAWHUB_TOKEN: ${{ secrets.CLAWHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "${CLAWHUB_TOKEN:-}" ]; then
+            echo "::error title=Missing CLAWHUB_TOKEN::Add a repository secret named CLAWHUB_TOKEN or re-enable ClawHub trusted publishing."
+            exit 1
+          fi
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          path = Path(os.environ["RUNNER_TEMP"]) / "clawhub-config.json"
+          path.write_text(
+              json.dumps(
+                  {
+                      "registry": "https://clawhub.ai",
+                      "token": os.environ["CLAWHUB_TOKEN"],
+                  },
+                  indent=2,
+              )
+              + "\n",
+              encoding="utf-8",
+          )
+          PY
+          echo "CLAWHUB_CONFIG_PATH=$RUNNER_TEMP/clawhub-config.json" >> "$GITHUB_ENV"
+
+      - name: Publish package to ClawHub
+        env:
+          SOURCE_URL: ${{ needs.prepare-package-source.outputs.source_url }}
+          VERSION: ${{ needs.guard.outputs.version }}
+          TAGS: ${{ needs.guard.outputs.tags }}
+          SOURCE_REPO: ${{ github.repository }}
+          SOURCE_COMMIT: ${{ github.sha }}
+          SOURCE_REF: ${{ github.ref }}
+        run: |
+          set -euo pipefail
+          clawhub package publish "$SOURCE_URL" \
+            --site https://clawhub.ai \
+            --registry https://clawhub.ai \
+            --version "$VERSION" \
+            --tags "$TAGS" \
+            --source-repo "$SOURCE_REPO" \
+            --source-commit "$SOURCE_COMMIT" \
+            --source-ref "$SOURCE_REF" \
+            --manual-override-reason "GitHub Actions publish via CLAWHUB_TOKEN" \
+            --json | tee "$RUNNER_TEMP/clawhub-package-publish.json"
+
+      - name: Upload ClawHub publish JSON artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: clawhub-package-publish-json
+          path: ${{ runner.temp }}/clawhub-package-publish.json
+          if-no-files-found: error
 
   publish-npm:
     name: Publish to npm
