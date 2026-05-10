@@ -425,19 +425,43 @@ class MemoryUpdater:
                     new_value = merge_op.apply(current_value, patch_value)
                     metadata[field.name] = new_value
 
-            # Handle links field: merge with existing links
+            # Handle links/backlinks fields: merge with existing
             incoming_links = getattr(resolved_op, "_incoming_links", [])
-            if incoming_links or (old_content and old_content.memory_fields.get("links")):
+            incoming_backlinks = getattr(resolved_op, "_incoming_backlinks", [])
+            has_existing_links = old_content and old_content.memory_fields
+            if (
+                incoming_links
+                or incoming_backlinks
+                or (has_existing_links and old_content.memory_fields.get("links"))
+                or (has_existing_links and old_content.memory_fields.get("backlinks"))
+            ):
                 from openviking.session.memory.merge_op.link_merge import merge_links
 
+                # Merge links
                 existing_links = []
-                if old_content and old_content.memory_fields:
+                if has_existing_links:
                     existing_links = old_content.memory_fields.get("links", [])
-                merged_links = merge_links(
-                    existing_links,
-                    [link.model_dump() for link in incoming_links],
-                )
-                metadata["links"] = merged_links
+                if incoming_links:
+                    merged_links = merge_links(
+                        existing_links,
+                        [link.model_dump() for link in incoming_links],
+                    )
+                    metadata["links"] = merged_links
+                elif existing_links:
+                    metadata["links"] = existing_links
+
+                # Merge backlinks
+                existing_backlinks = []
+                if has_existing_links:
+                    existing_backlinks = old_content.memory_fields.get("backlinks", [])
+                if incoming_backlinks:
+                    merged_backlinks = merge_links(
+                        existing_backlinks,
+                        [link.model_dump() for link in incoming_backlinks],
+                    )
+                    metadata["backlinks"] = merged_backlinks
+                elif existing_backlinks:
+                    metadata["backlinks"] = existing_backlinks
 
             # serialize_with_metadata modifies metadata dict, so pass a copy
             new_full_content = serialize_with_metadata(
@@ -448,21 +472,31 @@ class MemoryUpdater:
             await viking_fs.write_file(uri, new_full_content, ctx=ctx)
 
     def _distribute_links_to_operations(self, operations: ResolvedOperations) -> None:
-        """Distribute resolved_links to corresponding upsert operations by URI."""
+        """Distribute resolved_links to corresponding upsert operations by URI.
+
+        Links go into from_uri's "links" field; backlinks go into to_uri's "backlinks" field.
+        """
         # Collect all URIs that will be upserted
         upserted_uris = set()
         for op in operations.upsert_operations:
             op._incoming_links = []
+            op._incoming_backlinks = []
             for uri in op.uris:
                 upserted_uris.add(uri)
 
         # Attach links to their corresponding upsert operations
         for link in operations.resolved_links:
-            target_uri = link.from_uri if link.direction == "links" else link.to_uri
-            if target_uri in upserted_uris:
+            # Forward link -> stored in from_uri's "links"
+            if link.from_uri in upserted_uris:
                 for op in operations.upsert_operations:
-                    if target_uri in op.uris:
+                    if link.from_uri in op.uris:
                         op._incoming_links.append(link)
+                        break
+            # Backlink -> stored in to_uri's "backlinks"
+            if link.to_uri in upserted_uris:
+                for op in operations.upsert_operations:
+                    if link.to_uri in op.uris:
+                        op._incoming_backlinks.append(link)
                         break
 
     async def _apply_links_to_existing_files(
@@ -471,7 +505,10 @@ class MemoryUpdater:
         result: MemoryUpdateResult,
         ctx: RequestContext,
     ) -> None:
-        """Apply links to endpoint files that are NOT in the current upsert batch."""
+        """Apply links to endpoint files that are NOT in the current upsert batch.
+
+        Links go into from_uri's "links" field; backlinks go into to_uri's "backlinks" field.
+        """
         from openviking.session.memory.merge_op.link_merge import merge_links
         from openviking.session.memory.utils.content import serialize_with_metadata
 
@@ -484,29 +521,44 @@ class MemoryUpdater:
         for op in result.written_uris + result.edited_uris:
             upserted_uris.add(op)
 
-        # Group remaining links by target file
-        file_links: Dict[str, List[StoredLink]] = {}
+        # Group remaining links by target file and field
+        # file_links[uri]["links"] = forward links, file_links[uri]["backlinks"] = backlinks
+        file_links: Dict[str, Dict[str, List[StoredLink]]] = {}
         for link in resolved_links:
-            target_uri = link.from_uri if link.direction == "links" else link.to_uri
-            if target_uri not in upserted_uris:
-                if target_uri not in file_links:
-                    file_links[target_uri] = []
-                file_links[target_uri].append(link)
+            # Forward link -> from_uri's "links"
+            if link.from_uri not in upserted_uris:
+                file_links.setdefault(link.from_uri, {"links": [], "backlinks": []})
+                file_links[link.from_uri]["links"].append(link)
+            # Backlink -> to_uri's "backlinks"
+            if link.to_uri not in upserted_uris:
+                file_links.setdefault(link.to_uri, {"links": [], "backlinks": []})
+                file_links[link.to_uri]["backlinks"].append(link)
 
         # Apply links to each remaining file
-        for uri, links in file_links.items():
+        for uri, link_groups in file_links.items():
             try:
                 content = await viking_fs.read_file(uri, ctx=ctx)
                 if not content:
                     continue
                 parsed = parse_memory_file_with_fields(content)
-                existing_links = parsed.get("links", [])
 
-                merged_links = merge_links(
-                    existing_links,
-                    [link.model_dump() for link in links],
-                )
-                parsed["links"] = merged_links
+                # Merge links
+                if link_groups["links"]:
+                    existing_links = parsed.get("links", [])
+                    merged_links = merge_links(
+                        existing_links,
+                        [link.model_dump() for link in link_groups["links"]],
+                    )
+                    parsed["links"] = merged_links
+
+                # Merge backlinks
+                if link_groups["backlinks"]:
+                    existing_backlinks = parsed.get("backlinks", [])
+                    merged_backlinks = merge_links(
+                        existing_backlinks,
+                        [link.model_dump() for link in link_groups["backlinks"]],
+                    )
+                    parsed["backlinks"] = merged_backlinks
 
                 # Re-serialize with updated links
                 new_full_content = serialize_with_metadata(

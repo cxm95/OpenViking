@@ -45,40 +45,30 @@ class TestWikiLink:
 
 
 class TestStoredLink:
-    def test_forward_link(self):
+    def test_link(self):
         link = StoredLink(
             from_uri="viking://a",
             to_uri="viking://b",
-            direction="links",
             link_type=LinkType.BELONGS_TO,
             weight=0.9,
             created_at="2026-05-09T10:00:00+00:00",
         )
-        assert link.direction == "links"
-
-    def test_backward_link(self):
-        link = StoredLink(
-            from_uri="viking://a",
-            to_uri="viking://b",
-            direction="backlinks",
-            link_type=LinkType.BELONGS_TO,
-            weight=0.9,
-            created_at="2026-05-09T10:00:00+00:00",
-        )
-        assert link.direction == "backlinks"
+        assert link.from_uri == "viking://a"
+        assert link.to_uri == "viking://b"
+        assert link.link_type == LinkType.BELONGS_TO
 
     def test_model_dump(self):
         link = StoredLink(
             from_uri="viking://a",
             to_uri="viking://b",
-            direction="links",
             link_type=LinkType.RELATED_TO,
             created_at="2026-05-09T10:00:00+00:00",
         )
         d = link.model_dump()
         assert d["from_uri"] == "viking://a"
-        assert d["direction"] == "links"
+        assert d["to_uri"] == "viking://b"
         assert d["link_type"] == LinkType.RELATED_TO
+        assert "direction" not in d
 
 
 class TestMemoryTypeSchemaLinkEnabled:
@@ -104,7 +94,6 @@ class TestResolvedOperationsLinks:
         link = StoredLink(
             from_uri="viking://a",
             to_uri="viking://b",
-            direction="links",
             link_type=LinkType.RELATED_TO,
             created_at="2026-05-09T10:00:00+00:00",
         )

@@ -389,7 +389,12 @@ The final output of the model must strictly follow the JSON Schema format shown 
     def _resolve_links(
         self, operations, upsert_operations: List[ResolvedOperation]
     ) -> List[StoredLink]:
-        """Resolve WikiLinks with page_ids to StoredLinks with URIs."""
+        """Resolve WikiLinks with page_ids to StoredLinks with URIs.
+
+        Returns a flat list of StoredLink objects. Each link is stored once.
+        Links go into from_uri's "links" field; backlinks go into to_uri's "backlinks" field.
+        The routing is handled by memory_updater based on which file each link belongs to.
+        """
         from datetime import datetime, timezone
 
         raw_links = getattr(operations, "links", None)
@@ -415,30 +420,16 @@ The final output of the model must strictly follow the JSON Schema format shown 
                         f" (not a single word or not found in conversation)"
                     )
 
-            # Forward link (direction="links") - stored in from_uri's MEMORY_FIELDS
-            forward_link = StoredLink(
+            stored_link = StoredLink(
                 from_uri=from_uri,
                 to_uri=to_uri,
-                direction="links",
                 link_type=link.link_type,
                 weight=link.weight,
                 match_text=link.match_text,
                 description=link.description,
                 created_at=now,
             )
-            # Backward link (direction="backlinks") - stored in to_uri's MEMORY_FIELDS
-            backward_link = StoredLink(
-                from_uri=from_uri,
-                to_uri=to_uri,
-                direction="backlinks",
-                link_type=link.link_type,
-                weight=link.weight,
-                match_text=link.match_text,
-                description=link.description,
-                created_at=now,
-            )
-            resolved_links.append(forward_link)
-            resolved_links.append(backward_link)
+            resolved_links.append(stored_link)
 
         return resolved_links
 

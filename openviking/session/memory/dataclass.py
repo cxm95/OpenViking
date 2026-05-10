@@ -65,7 +65,6 @@ class StoredLink(BaseModel):
 
     from_uri: str
     to_uri: str
-    direction: str = Field(..., description='"links" (forward) or "backlinks" (reverse)')
     link_type: LinkType = LinkType.RELATED_TO
     weight: float = 1.0
     match_text: Optional[str] = None  # single word, must exist verbatim in conversation
