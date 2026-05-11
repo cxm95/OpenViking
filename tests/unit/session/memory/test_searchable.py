@@ -34,7 +34,7 @@ class TestSearchableYamlParsing:
     def test_events_searchable_fields(self):
         schema = self.registry.get("events")
         searchable = {f.name for f in schema.fields if f.searchable}
-        assert searchable == {"goal", "summary"}
+        assert searchable == {"event_name", "goal", "summary"}
 
     def test_tools_searchable_fields(self):
         schema = self.registry.get("tools")
@@ -44,7 +44,12 @@ class TestSearchableYamlParsing:
     def test_entities_searchable_fields(self):
         schema = self.registry.get("entities")
         searchable = {f.name for f in schema.fields if f.searchable}
-        assert searchable == set()  # content is always included as abstract, no need for searchable
+        assert searchable == {"category", "name"}
+
+    def test_preferences_searchable_fields(self):
+        schema = self.registry.get("preferences")
+        searchable = {f.name for f in schema.fields if f.searchable}
+        assert searchable == {"user", "topic"}
 
     def test_profile_searchable_fields(self):
         schema = self.registry.get("profile")

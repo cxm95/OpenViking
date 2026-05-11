@@ -659,7 +659,6 @@ class MemoryUpdater:
                             embedding_parts.append(json.dumps(searchable_data, ensure_ascii=False))
 
                 embedding_text = "\n\n".join(embedding_parts) if embedding_parts else abstract
-                print(f"[Vectorize] uri={uri}\nembedding_text=\n{embedding_text}")
 
                 # Get parent URI
                 from openviking_cli.utils.uri import VikingURI
