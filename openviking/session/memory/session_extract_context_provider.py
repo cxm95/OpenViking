@@ -363,10 +363,12 @@ After exploring, analyze the conversation and output ALL memory write/edit/delet
         for file_uri in read_files:
             try:
                 result = await read_tool.execute(self.create_tool_context(), uri=file_uri)
-                # Annotate with page_id for link extraction
-                page_id = self._page_id_map.get_page_id(file_uri) if self._page_id_map else None
-                if page_id is not None and isinstance(result, dict):
-                    result["page_id"] = page_id
+                # Annotate with page_id for link extraction (skip if read failed)
+                has_error = isinstance(result, dict) and "error" in result
+                if not has_error:
+                    page_id = self._page_id_map.get_page_id(file_uri) if self._page_id_map else None
+                    if page_id is not None and isinstance(result, dict):
+                        result["page_id"] = page_id
                 add_tool_call_pair_to_messages(
                     messages=pre_fetch_messages,
                     call_id=call_id_seq,
@@ -388,10 +390,14 @@ After exploring, analyze the conversation and output ALL memory write/edit/delet
                     continue
                 try:
                     result = await read_tool.execute(self.create_tool_context(), uri=file_uri)
-                    # Annotate with page_id for link extraction
-                    page_id = self._page_id_map.get_page_id(file_uri) if self._page_id_map else None
-                    if page_id is not None and isinstance(result, dict):
-                        result["page_id"] = page_id
+                    # Annotate with page_id for link extraction (skip if read failed)
+                    has_error = isinstance(result, dict) and "error" in result
+                    if not has_error:
+                        page_id = (
+                            self._page_id_map.get_page_id(file_uri) if self._page_id_map else None
+                        )
+                        if page_id is not None and isinstance(result, dict):
+                            result["page_id"] = page_id
                     add_tool_call_pair_to_messages(
                         messages=pre_fetch_messages,
                         call_id=call_id_seq,

@@ -446,11 +446,13 @@ The final output of the model must strictly follow the JSON Schema format shown 
             if tool_call.name == "read" and self._page_id_map:
                 uri = tool_call.arguments.get("uri", "")
                 if uri:
-                    page_id = self._page_id_map.get_page_id(uri)
-                    if isinstance(result, dict):
-                        result["page_id"] = page_id
-                    elif isinstance(result, str):
-                        result = f"[page_id: {page_id}]\n{result}"
+                    has_error = isinstance(result, dict) and "error" in result
+                    if not has_error:
+                        page_id = self._page_id_map.get_page_id(uri)
+                        if isinstance(result, dict):
+                            result["page_id"] = page_id
+                        elif isinstance(result, str):
+                            result = f"[page_id: {page_id}]\n{result}"
             return idx, tool_call, result
 
         action_tasks = [
