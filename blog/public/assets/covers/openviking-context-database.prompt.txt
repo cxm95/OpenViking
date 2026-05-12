@@ -1,0 +1,3 @@
+Cover image prompt:
+
+Watercolor on warm cream paper, 16:9. A highly abstract scene about a context database for AI agents: a thin indigo line shaped like a file-system tree flows into a soft golden semantic constellation, and the two forms meet at the center as a small glowing compass key. Around it, a few loose paper fragments, path-like branches, and faint memory rings suggest documents, code, search, and recall without showing literal UI. Minimal black ink line art, calm negative space, soft indigo, muted green, and gold washes. Premium technical editorial mood, quiet and intelligent, no text, no logos, no people, no screens, no dense diagrams, no bokeh, no purple-blue gradient. Deliver one critical insight only: scattered context becomes navigable memory for agents.

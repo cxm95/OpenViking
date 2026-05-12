@@ -106,7 +106,7 @@ function PostCard({ post, lang, navigate, S, formatDate, featured }) {
   const m = post.meta;
   const title = pickLocale(m.title, lang);
   const excerpt = pickLocale(m.description, lang);
-  const cover = m.cover;
+  const cover = m.cardCover || m.cover;
   const author = (m.authors || [])[0];
   const href = postPath(post.id);
   const open = (e) => {
@@ -153,6 +153,7 @@ export function PostView({ slug, lang, theme, navigate, S, formatDate, t }) {
   const langMissing = effectiveLang !== lang;
 
   const Component = post.Component;
+  const postS = useShellStrings(effectiveLang);
   const ctx = {
     lang: effectiveLang,
     theme,
@@ -208,16 +209,16 @@ export function PostView({ slug, lang, theme, navigate, S, formatDate, t }) {
         ) : null}
       </header>
 
-      <div className="b-post__layout">
-        <aside className="b-post__sidebar">
-          <TOC title={S.contents} />
-        </aside>
-        <div className="b-post__body">
-          <BlogContext.Provider value={ctx}>
+      <BlogContext.Provider value={ctx}>
+        <div className="b-post__layout">
+          <aside className="b-post__sidebar">
+            <TOC key={`${slug}:${effectiveLang}`} title={postS.contents} lang={effectiveLang} foldable={false} />
+          </aside>
+          <div className="b-post__body">
             <Component {...ctx} />
-          </BlogContext.Provider>
+          </div>
         </div>
-      </div>
+      </BlogContext.Provider>
 
       <footer className="b-post__foot">
         {m.tags?.length ? (

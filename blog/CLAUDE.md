@@ -4,6 +4,17 @@ You are an agent adding a post to the **OpenViking Blog**. This document is the 
 
 ---
 
+## Practical notes from the OpenViking context post
+
+1. Build for two readers: the HTML page is for humans, while `/post/<slug>/llm.txt` is for agents. Keep `llm.txt` clean, source-like, and English-only when requested; expose it through page metadata and `/llms.txt`, not through visible helper copy.
+2. Let the article structure drive the TOC. Use `H2` for major sections, `H3` for TOC-level blocks, and `H4` inside cards/panels. Do not add TOC index numbers. Folding is opt-in via `TOC foldable`; default should stay expanded.
+3. Prefer visible, scrollable presentation over hidden click-to-reveal panels. Tabs and chips should act as sticky jump/navigation aids, not as the only way to discover content.
+4. Treat covers as editorial signals, not diagrams. Use abstract 16:9 art for the core insight, keep high-res imagery for post hero/OG, and provide a lighter `cardCover` for index cards when the source image is large.
+5. Respect the post language end to end. Switching language must update body, shell-adjacent UI such as TOC, dates, and labels without requiring refresh.
+6. For Lark-derived posts, preserve source provenance in metadata, but remove internal rendering notes from the human article. The page should read like a finished blog post, not a build log.
+
+---
+
 ## What you are building
 
 A single blog post lives in **`src/posts/<slug>/`**. The shell discovers it via a JS-side registry. To add a post you write one file:

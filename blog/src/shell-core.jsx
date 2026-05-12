@@ -127,7 +127,7 @@ export const SHELL_STRINGS = {
     notFoundBody: 'That essay does not exist. It may have been a dream.',
     langLabel: 'Language',
     themeLabel: 'Theme',
-    notAvailableLang: 'This essay is not yet translated. Showing English.',
+    notAvailableLang: 'This essay is not yet translated. Showing the available language.',
     tags: 'Tags',
   },
   zh: {
@@ -153,7 +153,7 @@ export const SHELL_STRINGS = {
     notFoundBody: '这篇文章不存在,也许只是一场梦。',
     langLabel: '语言',
     themeLabel: '主题',
-    notAvailableLang: '本文尚未翻译,显示英文版本。',
+    notAvailableLang: '本文尚未翻译，显示当前可用版本。',
     tags: '标签',
   },
 };

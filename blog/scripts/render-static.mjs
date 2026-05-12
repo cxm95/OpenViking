@@ -25,10 +25,11 @@ function escapeAttr(value = '') {
 
 function jsonLd(meta) {
   if (meta.type === 'article') {
+    const headline = meta.title.replace(/ \| OpenViking (Blog|博客)$/, '');
     return {
       '@context': 'https://schema.org',
       '@type': 'Article',
-      headline: meta.title.replace(/ \| OpenViking Blog$/, ''),
+      headline,
       description: meta.description,
       image: meta.image,
       datePublished: meta.publishedAt,
@@ -69,9 +70,10 @@ function managedHead(meta) {
   const description = escapeAttr(meta.description);
   const image = escapeAttr(meta.image);
   const canonical = escapeAttr(meta.canonical);
+  const llmUrl = meta.llmPath ? `${SITE_URL}${meta.llmPath}` : '';
   const ld = JSON.stringify(jsonLd(meta)).replaceAll('</script', '<\\/script');
 
-  return [
+  const tags = [
     `<title>${title}</title>`,
     `<meta name="description" content="${description}" />`,
     `<link rel="canonical" href="${canonical}" />`,
@@ -85,8 +87,19 @@ function managedHead(meta) {
     `<meta name="twitter:title" content="${escapeAttr(meta.title)}" />`,
     `<meta name="twitter:description" content="${description}" />`,
     `<meta name="twitter:image" content="${image}" />`,
-    `<script type="application/ld+json">${ld}</script>`,
-  ].join('\n  ');
+  ];
+
+  if (meta.llmPath) {
+    tags.push(`<link rel="alternate" type="text/markdown" title="llm.txt" href="${escapeAttr(llmUrl)}" />`);
+    tags.push(`<meta name="llm:content" content="${escapeAttr(llmUrl)}" />`);
+  }
+
+  if (meta.sourceUrl) {
+    tags.push(`<meta name="source:lark" content="${escapeAttr(meta.sourceUrl)}" />`);
+  }
+
+  tags.push(`<script type="application/ld+json">${ld}</script>`);
+  return tags.join('\n  ');
 }
 
 function injectPage({ html, meta, body }) {
@@ -151,7 +164,10 @@ async function writeLlms(routes) {
     '',
     ...postRoutes.map(route => {
       const meta = getPageMeta(route);
-      return `- [${meta.title.replace(/ \| OpenViking Blog$/, '')}](${meta.canonical}) - ${meta.description}`;
+      const title = meta.title.replace(/ \| OpenViking (Blog|博客)$/, '');
+      const llm = meta.llmPath ? ` Agent-readable: ${SITE_URL}${meta.llmPath}.` : '';
+      const source = meta.sourceUrl ? ` Source: ${meta.sourceUrl}.` : '';
+      return `- [${title}](${meta.canonical}) - ${meta.description}${llm}${source}`;
     }),
     '',
   ];

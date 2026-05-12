@@ -69,12 +69,13 @@ export function Hr({ ornament }) {
 
 /* ---------- headings ---------- */
 
-function Heading({ level, children, id, eyebrow }) {
+function Heading({ level, children, id, eyebrow, toc }) {
   const Tag = `h${level}`;
   const text = flattenChildren(children);
   const autoId = id || slugify(text);
+  const includeInToc = toc ?? level <= 3;
   return (
-    <Tag id={autoId} className={`b-h b-h${level}`} data-toc={level <= 3 ? 'true' : undefined}>
+    <Tag id={autoId} className={`b-h b-h${level}`} data-toc={includeInToc ? 'true' : undefined}>
       {eyebrow ? <span className="b-eyebrow">{eyebrow}</span> : null}
       {children}
     </Tag>
@@ -266,15 +267,24 @@ export function Aside({ children }) {
 
 /* ---------- table of contents ---------- */
 
-export function TOC({ minLevel = 2, maxLevel = 3, title }) {
-  const { lang } = useBlog();
+export function TOC({ minLevel = 2, maxLevel = 3, title, lang, foldable = false }) {
+  const { lang: contextLang } = useBlog();
+  const tocLang = lang || contextLang;
   const [items, setItems] = useState([]);
   const [active, setActive] = useState(null);
+  const [expanded, setExpanded] = useState(false);
   useEffect(() => {
-    const article = document.querySelector('.b-article');
-    if (!article) return;
-    const sel = Array.from({ length: maxLevel - minLevel + 1 }, (_, i) => `h${minLevel + i}[id]`).join(',');
+    const root = document.querySelector('.b-post__body');
+    if (!root) return;
+    setActive(null);
+    setExpanded(false);
+    const sel = Array.from({ length: maxLevel - minLevel + 1 }, (_, i) => `h${minLevel + i}[id][data-toc="true"]`).join(',');
     const update = () => {
+      const article = root.querySelector('.b-article');
+      if (!article) {
+        setItems([]);
+        return;
+      }
       const found = Array.from(article.querySelectorAll(sel))
         .filter(el => !el.closest('.b-toc'))
         .map(el => ({ id: el.id, text: el.textContent.trim(), level: +el.tagName[1] }));
@@ -282,9 +292,9 @@ export function TOC({ minLevel = 2, maxLevel = 3, title }) {
     };
     update();
     const mo = new MutationObserver(update);
-    mo.observe(article, { childList: true, subtree: true });
+    mo.observe(root, { childList: true, subtree: true });
     return () => mo.disconnect();
-  }, [minLevel, maxLevel]);
+  }, [minLevel, maxLevel, tocLang]);
 
   useEffect(() => {
     if (!items.length) return;
@@ -304,12 +314,50 @@ export function TOC({ minLevel = 2, maxLevel = 3, title }) {
   }, [items]);
 
   if (!items.length) return null;
-  const heading = title ?? pickLocale({ en: 'Contents', zh: '目录' }, lang);
+  const heading = pickLocale(title ?? { en: 'Contents', zh: '目录' }, tocLang);
+  const longToc = foldable && items.length > 18;
+  let currentParent = null;
+  const normalized = items.map((it, index) => {
+    if (it.level === minLevel) currentParent = it.id;
+    return {
+      ...it,
+      index,
+      parentId: it.level === minLevel ? it.id : currentParent,
+    };
+  });
+  const activeItem = normalized.find(it => it.id === active);
+  const activeParent = activeItem?.parentId || normalized.find(it => it.level === minLevel)?.id;
+  const visibleItems = longToc && !expanded
+    ? normalized.filter(it => it.level === minLevel || it.parentId === activeParent)
+    : normalized;
+  const hiddenCount = Math.max(0, normalized.length - visibleItems.length);
+  const toggleLabel = expanded
+    ? pickLocale({ en: 'Collapse', zh: '折叠' }, tocLang)
+    : pickLocale({ en: 'Expand', zh: '展开' }, tocLang);
   return (
     <nav className="b-toc" aria-label={heading}>
-      <div className="b-toc__title">{heading}</div>
+      <div className="b-toc__head">
+        <div>
+          <div className="b-toc__title">{heading}</div>
+          {longToc && !expanded ? (
+            <div className="b-toc__hint">
+              {pickLocale({ en: `${hiddenCount} folded`, zh: `${hiddenCount} 项已折叠` }, tocLang)}
+            </div>
+          ) : null}
+        </div>
+        {longToc ? (
+          <button
+            type="button"
+            className="b-toc__toggle"
+            aria-expanded={expanded}
+            onClick={() => setExpanded(v => !v)}
+          >
+            {toggleLabel}
+          </button>
+        ) : null}
+      </div>
       <ol className="b-toc__list">
-        {items.map((it, i) => (
+        {visibleItems.map((it, i) => (
           <li key={it.id} className={`b-toc__item b-toc__item--l${it.level} ${active === it.id ? 'is-active' : ''}`}>
             <a href={`#${it.id}`} onClick={(e) => {
               e.preventDefault();
@@ -320,7 +368,6 @@ export function TOC({ minLevel = 2, maxLevel = 3, title }) {
                 history.replaceState(null, '', `${location.pathname}${location.search}#${it.id}`);
               }
             }}>
-              <span className="b-toc__num">{String(i+1).padStart(2,'0')}</span>
               <span className="b-toc__text">{it.text}</span>
             </a>
           </li>

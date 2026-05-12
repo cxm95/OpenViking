@@ -72,6 +72,10 @@ export function getPageMeta({ route, lang = 'en' }) {
       updatedAt: meta.updatedAt,
       tags: meta.tags || [],
       authors: meta.authors || [],
+      llmPath: meta.llmPath,
+      sourceUrl: meta.sourceUrl,
+      sourceTitle: meta.sourceTitle,
+      sourceUpdatedAt: meta.sourceUpdatedAt,
     };
   }
 
