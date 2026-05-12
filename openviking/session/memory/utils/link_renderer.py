@@ -9,6 +9,7 @@ class LinkRenderer:
     """Renders and strips local markdown links in memory file content based on StoredLink metadata."""
 
     _RELATIVE_LINK_RE = re.compile(r"\[(?P<text>[^\]]+)\]\((?P<target>[^)\s]+)\)")
+    _MEMORY_FIELDS_RE = re.compile(r"(\n\n<!--\s*MEMORY_FIELDS\s*\n)", re.DOTALL)
 
     @staticmethod
     def render_links(content: str, source_uri: str, links: List[Dict]) -> str:
