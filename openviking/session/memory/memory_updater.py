@@ -20,7 +20,7 @@ from openviking.message import Message
 from openviking.server.identity import RequestContext
 from openviking.session.memory.dataclass import (
     MemoryField,
-    MemoryFileContent,
+    MemoryFile,
     ResolvedOperations,
     ResolvedOperation,
 )
@@ -342,7 +342,7 @@ class MemoryUpdater:
                 for uri in resolved_op.uris:
                     result.add_error(uri, e)
 
-        # Apply delete operations (delete_file_contents is List[MemoryFileContent])
+        # Apply delete operations
         for file_content in operations.delete_file_contents:
             try:
                 await self._apply_delete(file_content.uri, ctx)
@@ -373,7 +373,11 @@ class MemoryUpdater:
                 dirs[dir_path] = operation.memory_type
         for file_content in operations.delete_file_contents:
             dir_path = "/".join(file_content.uri.split("/")[:-1])
-            dirs[dir_path] = file_content.memory_fields.get("memory_type", "unknown")
+            dirs[dir_path] = (
+                file_content.extra_fields.get("memory_type")
+                or file_content.memory_type
+                or "unknown"
+            )
 
         for dir, memory_type in dirs.items():
             logger.info(f"[apply_operations] Generating overview for {memory_type} at {dir}")

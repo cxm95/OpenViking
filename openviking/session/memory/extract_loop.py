@@ -13,7 +13,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from openviking.models.vlm.base import ToolCall, VLMBase
 from openviking.server.identity import RequestContext
 from openviking.session.memory.dataclass import (
-    MemoryFileContent,
+    MemoryFile,
     ResolvedOperation,
     ResolvedOperations,
     StoredLink,
@@ -269,7 +269,7 @@ The final output of the model must strictly follow the JSON Schema format shown 
     async def resolve_operations(self, operations) -> ResolvedOperations:
         tracer.info(f"operations={JsonUtils.dumps(operations)}")
         upsert_operations: List[ResolvedOperation] = []
-        delete_file_contents: List[MemoryFileContent] = []
+        delete_file_contents: List[MemoryFile] = []
         errors: List[str] = []
 
         # 获取 registry

@@ -15,7 +15,7 @@ from typing import Any, Dict, List
 
 from openviking.core.namespace import to_user_space, to_agent_space
 from openviking.server.identity import RequestContext, ToolContext
-from openviking.session.memory.dataclass import MemoryFileContent
+from openviking.session.memory.dataclass import MemoryFile
 from openviking.session.memory.session_extract_context_provider import (
     SessionExtractContextProvider,
 )

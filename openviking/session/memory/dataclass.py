@@ -142,12 +142,6 @@ class MemoryData(BaseModel):
         self.fields[field_name] = value
 
 
-class MemoryFileContent(BaseModel):
-    uri: Optional[str] = None
-    plain_content: str
-    memory_fields: Dict
-
-
 class MemoryFile(BaseModel):
     """Typed representation of a memory file's parsed content."""
 
@@ -191,7 +185,7 @@ class MemoryFile(BaseModel):
 
 
 class ResolvedOperation(BaseModel):
-    old_memory_file_content: Optional[MemoryFileContent]
+    old_memory_file_content: Optional[MemoryFile]
     memory_fields: Dict
     memory_type: str  # The memory type (e.g., 'tools', 'skills', 'events')
     uris: List[str]
@@ -203,7 +197,7 @@ class ResolvedOperation(BaseModel):
 
 class ResolvedOperations(BaseModel):
     upsert_operations: List[ResolvedOperation]
-    delete_file_contents: List[MemoryFileContent]
+    delete_file_contents: List[MemoryFile]
     errors: List[str]
     resolved_links: List[StoredLink] = Field(default_factory=list)
 

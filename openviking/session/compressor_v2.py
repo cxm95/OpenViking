@@ -638,7 +638,7 @@ class SessionCompressorV2:
             # historical source_trajectories into the replacement experience.
             inherited_traj_uris: List[str] = []
             for dc in getattr(operations, "delete_file_contents", []):
-                existing = (dc.memory_fields or {}).get("source_trajectories", [])
+                existing = dc.extra_fields.get("source_trajectories", [])
                 if isinstance(existing, list):
                     inherited_traj_uris.extend(existing)
                 elif isinstance(existing, str) and existing.strip():
@@ -788,13 +788,12 @@ class SessionCompressorV2:
 
             if old_file:
                 # Old content existed, this is an update
-                raw_before = old_file.plain_content
-                mf = MemoryFileUtils.read(raw_before)
+                before_content = old_file.content
                 updates.append(
                     {
                         "uri": uri,
                         "memory_type": memory_type,
-                        "before": mf.content or raw_before,
+                        "before": before_content,
                         "after": "",  # Will be filled after
                     }
                 )
@@ -812,16 +811,13 @@ class SessionCompressorV2:
         for uri in result.edited_uris:
             op = upsert_by_uri.get(uri)
             memory_type = op.memory_type if op else self._get_memory_type_from_uri(uri)
-            old_content = None
-            if op and op.old_memory_file_content:
-                old_content = op.old_memory_file_content.plain_content
-            raw_before = old_content or ""
-            mf = MemoryFileUtils.read(raw_before) if raw_before else MemoryFile()
+            old_mf = op.old_memory_file_content if op and op.old_memory_file_content else None
+            before_content = old_mf.content if old_mf else ""
             updates.append(
                 {
                     "uri": uri,
                     "memory_type": memory_type,
-                    "before": mf.content if raw_before else "",
+                    "before": before_content,
                     "after": "",  # Will be filled after
                 }
             )
@@ -830,16 +826,17 @@ class SessionCompressorV2:
         for uri in result.deleted_uris:
             deleted_content = None
             dc = delete_by_uri.get(uri)
-            memory_type = dc.memory_fields.get("memory_type", "unknown") if dc else "unknown"
             if dc:
-                deleted_content = dc.plain_content
-            raw_deleted = deleted_content or ""
-            mf = MemoryFileUtils.read(raw_deleted) if raw_deleted else MemoryFile()
+                memory_type = dc.memory_type or "unknown"
+                deleted_content = dc.content
+            else:
+                memory_type = "unknown"
+                deleted_content = ""
             deletes.append(
                 {
                     "uri": uri,
                     "memory_type": memory_type,
-                    "deleted_content": mf.content,
+                    "deleted_content": deleted_content,
                 }
             )
 
