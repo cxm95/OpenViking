@@ -6,6 +6,7 @@ OpenViking Service Core.
 Main service class that composes all sub-services and manages infrastructure lifecycle.
 """
 
+import multiprocessing
 import os
 from typing import Any, Optional
 
@@ -45,19 +46,31 @@ def _resolve_queuefs_mount_point(config: Any = None) -> str:
     """Resolve QueueFS mount point for this process.
 
     `shared` keeps the historical global queue root (`/queue`).
-    `process` isolates each worker under `/queue/worker-<id>`.
+    `worker` isolates each worker under `/queue/worker-<index>`.
     """
-    scope = getattr(config, "queuefs_scope", None)
-    if not scope:
+    mode = None
+    if config is not None:
+        storage = getattr(config, "storage", None)
+        if storage is None and hasattr(config, "agfs"):
+            storage = config
+        agfs = getattr(storage, "agfs", None) if storage is not None else None
+        queuefs = getattr(agfs, "queuefs", None) if agfs is not None else None
+        mode = getattr(queuefs, "mode", None)
+
+    if not mode:
         try:
-            from openviking.server.config import load_server_config
+            from openviking_cli.utils.config import get_openviking_config
 
-            scope = load_server_config().queuefs_scope
+            mode = get_openviking_config().storage.agfs.queuefs.mode
         except Exception:
-            scope = "shared"
+            mode = "shared"
 
-    if scope == "process":
-        worker_id = os.environ.get("OPENVIKING_QUEUE_WORKER_ID") or str(os.getpid())
+    if mode == "worker":
+        identity = getattr(multiprocessing.current_process(), "_identity", ())
+        if identity:
+            worker_id = str(identity[0] - 1)
+        else:
+            worker_id = str(os.getpid())
         return f"/queue/worker-{worker_id}"
     return "/queue"
 

@@ -102,6 +102,11 @@ class S3Config(BaseModel):
 class QueueFSConfig(BaseModel):
     """Configuration for QueueFS backend."""
 
+    mode: str = Field(
+        default="shared",
+        description="QueueFS namespace mode: 'shared' | 'worker'",
+    )
+
     backend: str = Field(
         default="sqlite",
         description="QueueFS backend: 'memory' | 'sqlite' | 'sqlite3'",
@@ -126,6 +131,10 @@ class QueueFSConfig(BaseModel):
 
     @model_validator(mode="after")
     def validate_config(self):
+        valid_modes = {"shared", "worker"}
+        if self.mode not in valid_modes:
+            raise ValueError("queuefs mode must be one of: 'shared', 'worker'")
+
         valid_backends = {"memory", "sqlite", "sqlite3"}
         if self.backend not in valid_backends:
             raise ValueError("queuefs backend must be one of: 'memory', 'sqlite', 'sqlite3'")

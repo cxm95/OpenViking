@@ -100,6 +100,7 @@ def test_agfs_s3_normalize_encoding_chars_is_forwarded_to_ragfs_plugin_config():
 def test_agfs_queuefs_defaults_to_sqlite_backend():
     config = AGFSConfig(path="/tmp/ov-test", backend="local")
 
+    assert config.queuefs.mode == "shared"
     assert config.queuefs.backend == "sqlite"
     assert config.queuefs.recover_stale_sec == 0
     assert config.queuefs.busy_timeout_ms == 5000
@@ -109,10 +110,20 @@ def test_agfs_queuefs_accepts_memory_backend():
     config = AGFSConfig(
         path="/tmp/ov-test",
         backend="local",
-        queuefs={"backend": "memory"},
+        queuefs={"mode": "worker", "backend": "memory"},
     )
 
+    assert config.queuefs.mode == "worker"
     assert config.queuefs.backend == "memory"
+
+
+def test_agfs_queuefs_rejects_legacy_process_mode():
+    with pytest.raises(ValueError, match="queuefs mode"):
+        AGFSConfig(
+            path="/tmp/ov-test",
+            backend="local",
+            queuefs={"mode": "process"},
+        )
 
 
 def test_agfs_queuefs_rejects_invalid_backend():
