@@ -238,7 +238,7 @@ The final output of the model must strictly follow the JSON Schema format shown 
                 await self.finalize_operations(final_operations)
                 break
             # If no tool calls either, continue to next iteration (don't break!)
-            logger.warning(
+            tracer.error(
                 f"LLM returned neither tool calls nor operations (iteration {iteration}/{max_iterations})"
             )
             # Add format error message if parse failed (max 1 retry)
@@ -394,7 +394,7 @@ The final output of the model must strictly follow the JSON Schema format shown 
             from_uri = self._page_id_map.resolve(link.f)
             to_uri = self._page_id_map.resolve(link.t)
             if not from_uri or not to_uri:
-                logger.warning(f"Skipping link with unresolved page_ids: f={link.f}, t={link.t}")
+                tracer.error(f"Skipping link with unresolved page_ids: f={link.f}, t={link.t}")
                 continue
 
             stored_link = StoredLink(
@@ -440,7 +440,7 @@ The final output of the model must strictly follow the JSON Schema format shown 
                 has_unknown_tool = True
             # Skip if arguments is None
             if tool_call.arguments is None:
-                logger.warning(f"Tool call {tool_call.name} has no arguments, skipping")
+                tracer.error(f"Tool call {tool_call.name} has no arguments, skipping")
                 continue
 
             tools_used.append(
@@ -551,7 +551,7 @@ The final output of the model must strictly follow the JSON Schema format shown 
 
                 if error is not None:
                     print(f"content={content}")
-                    logger.warning(f"Failed to parse memory operations: {error}")
+                    tracer.error(f"Failed to parse memory operations: {error}")
                     return (None, None)
 
                 return (None, operations)

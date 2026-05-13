@@ -308,7 +308,7 @@ class MemoryUpdater:
         viking_fs = self._get_viking_fs()
 
         if not viking_fs:
-            logger.warning("VikingFS not available, skipping memory operations")
+            tracer.error("VikingFS not available, skipping memory operations")
             return result
 
         # Use provided registry or fall back to self._registry
@@ -317,7 +317,7 @@ class MemoryUpdater:
             raise ValueError("MemoryTypeRegistry is required for URI resolution")
 
         # Resolve all URIs first (pass extract_context for template rendering)
-        logger.info(f"[MemoryUpdater] applying operations, isolation_handler={isolation_handler}")
+        tracer.info(f"[MemoryUpdater] applying operations, isolation_handler={isolation_handler}")
 
         if operations.has_errors():
             for error in operations.errors:
@@ -406,7 +406,7 @@ class MemoryUpdater:
             )
 
         for dir, memory_type in dirs.items():
-            logger.info(f"[apply_operations] Generating overview for {memory_type} at {dir}")
+            tracer.info(f"[apply_operations] Generating overview for {memory_type} at {dir}")
             await self.generate_overview(memory_type, dir, ctx, extract_context)
 
         return result
@@ -595,7 +595,7 @@ class MemoryUpdater:
                 new_full_content = MemoryFileUtils.write(mf)
                 await viking_fs.write_file(uri, new_full_content, ctx=ctx)
             except Exception as e:
-                logger.warning(f"Failed to apply links to existing file {uri}: {e}")
+                tracer.error(f"Failed to apply links to existing file {uri}: {e}")
 
     async def _apply_delete(self, uri: str, ctx: RequestContext) -> None:
         """Apply delete operation (uri is already a string)."""
@@ -716,7 +716,7 @@ class MemoryUpdater:
                     logger.debug(f"Enqueued memory for vectorization: {uri}")
 
             except Exception as e:
-                logger.warning(f"Failed to vectorize memory {uri}: {e}")
+                tracer.error(f"Failed to vectorize memory {uri}: {e}")
 
     async def generate_overview(
         self,
@@ -763,7 +763,7 @@ class MemoryUpdater:
                     md_files.append(f"{base_uri}/{name}")
 
         except Exception as e:
-            logger.warning(f"Failed to list files in {directory}: {e}")
+            tracer.error(f"Failed to list files in {directory}: {e}")
             return
 
         # If no memory files, delete the .overview.md and the directory if empty
@@ -799,7 +799,7 @@ class MemoryUpdater:
                     }
                 )
             except Exception as e:
-                logger.warning(f"Failed to parse {file_path}: {e}")
+                tracer.error(f"Failed to parse {file_path}: {e}")
                 continue
 
         if not items:
@@ -817,7 +817,7 @@ class MemoryUpdater:
                 extract_context=extract_context,
             )
         except Exception as e:
-            logger.error(f"Failed to render overview template for {memory_type}: {e}")
+            tracer.error(f"Failed to render overview template for {memory_type}: {e}")
             return
 
         # Write .overview.md to the directory
@@ -826,4 +826,4 @@ class MemoryUpdater:
             await viking_fs.write_file(overview_path, rendered, ctx=ctx)
             tracer.info(f"[generate_overview] Generated overview: {overview_path}")
         except Exception as e:
-            logger.error(f"Failed to write overview {overview_path}: {e}")
+            tracer.error(f"Failed to write overview {overview_path}: {e}")

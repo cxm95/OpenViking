@@ -22,6 +22,7 @@ from openviking.session.memory.session_extract_context_provider import (
 from openviking.session.memory.tools import get_tool
 from openviking.session.memory.utils.memory_file_utils import MemoryFileUtils
 from openviking.storage.viking_fs import VikingFS
+from openviking.telemetry import tracer
 from openviking_cli.utils import get_logger
 
 logger = get_logger(__name__)
@@ -134,12 +135,12 @@ All memory content must be written in {output_language}.
                 mf = MemoryFileUtils.read(raw, uri=uri)
                 results.append({"uri": uri, "content": mf.content})
             except Exception as e:
-                logger.warning(f"Failed to read source trajectory {uri}: {e}")
+                tracer.error(f"Failed to read source trajectory {uri}: {e}")
         return results
 
     async def prefetch(self) -> List[Dict]:
         if not isinstance(self.messages, list):
-            logger.warning(f"Expected List[Message], got {type(self.messages)}")
+            tracer.error(f"Expected List[Message], got {type(self.messages)}")
             return []
 
         ctx = self._ctx
@@ -174,7 +175,7 @@ All memory content must be written in {output_language}.
                             if m.get("uri")
                         ]
                 except Exception as e:
-                    logger.warning(f"Failed to search experiences in {experience_dir}: {e}")
+                    tracer.error(f"Failed to search experiences in {experience_dir}: {e}")
 
             if not candidate_uris:
                 try:
@@ -192,7 +193,7 @@ All memory content must be written in {output_language}.
                         fallback_uris.append(uri)
                     candidate_uris = fallback_uris[:SEARCH_TOP_K]
                 except Exception as e:
-                    logger.warning(f"Failed to list experiences in {experience_dir}: {e}")
+                    tracer.error(f"Failed to list experiences in {experience_dir}: {e}")
 
         # Build candidate experiences section
         exp_sections: List[str] = []
@@ -200,7 +201,7 @@ All memory content must be written in {output_language}.
             try:
                 exp_raw = await viking_fs.read_file(exp_uri, ctx=ctx)
             except Exception as e:
-                logger.warning(f"Failed to read experience {exp_uri}: {e}")
+                tracer.error(f"Failed to read experience {exp_uri}: {e}")
                 continue
 
             self.prefetched_uris.append(exp_uri)

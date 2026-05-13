@@ -357,7 +357,7 @@ After exploring, analyze the conversation and output ALL memory write/edit/delet
         messages = self.messages
 
         if not isinstance(messages, list):
-            logger.warning(f"Expected List[Message], got {type(messages)}")
+            tracer.error(f"Expected List[Message], got {type(messages)}")
             return []
 
         # 先构建 Conversation History user message
@@ -447,7 +447,7 @@ After exploring, analyze the conversation and output ALL memory write/edit/delet
                 )
                 call_id_seq += 1
             except Exception as e:
-                logger.warning(f"Failed to search in {ls_dirs}: {e}")
+                tracer.error(f"Failed to search in {ls_dirs}: {e}")
 
         # 读取单文件 schema 的文件（只对非 add_only 模式）
         for file_uri in read_files:
@@ -463,7 +463,7 @@ After exploring, analyze the conversation and output ALL memory write/edit/delet
                 # read_file_contents
                 call_id_seq += 1
             except Exception as e:
-                logger.warning(f"Failed to read {file_uri}: {e}")
+                tracer.error(f"Failed to read {file_uri}: {e}")
 
         # eager_prefetch 模式：读取搜索结果 top-N
         if self._eager_prefetch and read_tool:
@@ -483,7 +483,7 @@ After exploring, analyze the conversation and output ALL memory write/edit/delet
                     )
                     call_id_seq += 1
                 except Exception as e:
-                    logger.warning(f"Failed to read {file_uri}: {e}")
+                    tracer.error(f"Failed to read {file_uri}: {e}")
 
         return pre_fetch_messages
 
