@@ -89,11 +89,19 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     curl \
     libstdc++6 \
+    libgomp1 \
+    build-essential \
+    cmake \
  && rm -rf /var/lib/apt/lists/*
+
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 
 WORKDIR /app
 
 COPY --from=py-builder /app/.venv /app/.venv
+RUN uv pip install --python /app/.venv/bin/python --no-cache llama-cpp-python \
+ && apt-get purge -y --auto-remove build-essential cmake \
+ && rm -rf /var/lib/apt/lists/*
 COPY docker/openviking-console-entrypoint.sh /usr/local/bin/openviking-console-entrypoint
 COPY docker/pending_health_server.py /usr/local/bin/openviking-pending-health
 RUN mkdir -p /app/.openviking \

@@ -30,6 +30,7 @@ _PORTABLE_SCALAR_FIELDS = frozenset(
         "name",
         "description",
         "tags",
+        "task_ref",
         "abstract",
     }
 )
@@ -256,6 +257,31 @@ async def vectorize_directory_meta(
         if not ctx:
             logger.warning("No context provided for vectorization")
             return
+
+        # Auto-read .meta.yaml for scalar overrides if not explicitly provided
+        if scalar_overrides is None:
+            try:
+                viking_fs = get_viking_fs()
+                _meta_uri = f"{uri}/.meta.yaml"
+                if await viking_fs.exists(_meta_uri, ctx=ctx):
+                    _raw = await viking_fs.read_file(_meta_uri, ctx=ctx)
+                    _text = _raw.decode("utf-8") if isinstance(_raw, bytes) else _raw
+                    import yaml as _yaml
+                    _fm = _yaml.safe_load(_text)
+                    if isinstance(_fm, dict):
+                        _tags = "unknown"
+                        _task_ref = ""
+                        if _fm.get("tags"):
+                            _tv = _fm["tags"]
+                            _tags = ",".join(str(t) for t in _tv) if isinstance(_tv, list) else str(_tv)
+                        if _fm.get("task_ref"):
+                            _task_ref = str(_fm["task_ref"])
+                        scalar_overrides = {
+                            0: {"tags": _tags, "task_ref": _task_ref},
+                            1: {"tags": _tags, "task_ref": _task_ref},
+                        }
+            except Exception:
+                pass
 
         queue_manager = get_queue_manager()
         embedding_queue = queue_manager.get_queue(queue_manager.EMBEDDING)
@@ -491,7 +517,9 @@ async def index_resource(
         overview = content.decode("utf-8") if isinstance(content, bytes) else content
 
     if abstract or overview:
-        await vectorize_directory_meta(uri, abstract, overview, context_type=context_type, ctx=ctx)
+        await vectorize_directory_meta(
+            uri, abstract, overview, context_type=context_type, ctx=ctx,
+        )
 
     # 2. Index Files
     try:
