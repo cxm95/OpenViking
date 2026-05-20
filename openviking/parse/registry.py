@@ -17,6 +17,7 @@ from openviking.parse.parsers.excel import ExcelParser
 
 # Import will be handled dynamically to avoid dependency issues
 from openviking.parse.parsers.html import HTMLParser
+from openviking.parse.parsers.json_parser import JSONParser
 
 # Import markitdown-inspired parsers
 from openviking.parse.parsers.legacy_doc import LegacyDocParser
@@ -75,6 +76,7 @@ class ParserRegistry:
         self.register("zip", ZipParser())
         self.register("directory", DirectoryParser())
 
+        self.register("json", JSONParser())
         self.register("image", ImageParser())
         self.register("audio", AudioParser())
         self.register("video", VideoParser())
