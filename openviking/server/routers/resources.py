@@ -80,6 +80,7 @@ class AddResourceRequest(BaseModel):
     exclude: Optional[str] = None
     directly_upload_media: bool = True
     preserve_structure: Optional[bool] = None
+    build_index: bool = True
     telemetry: TelemetryRequest = False
     watch_interval: float = 0
 
@@ -200,6 +201,7 @@ async def add_resource(
                 instruction=request.instruction,
                 wait=request.wait,
                 timeout=request.timeout,
+                build_index=request.build_index,
                 allow_local_path_resolution=allow_local_path_resolution,
                 enforce_public_remote_targets=True,
                 **kwargs,
